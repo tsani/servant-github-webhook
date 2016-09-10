@@ -42,9 +42,11 @@ the configuration of the webhook on GitHub. See 'GitHubKey' for more details.
 {-# LANGUAGE TypeOperators #-}
 
 module Servant.GitHub.Webhook
-( -- * Combinators
+( -- * Servant combinators
   GitHubSignedReqBody
 , GitHubEvent
+
+  -- ** Security
 , GitHubKey(..)
 
   -- ** Example
@@ -56,7 +58,8 @@ module Servant.GitHub.Webhook
 
   -- * Implementation details
   -- ** Type-level programming machinery
-, Demote(..)
+, Demote
+, Demote'
 , Reflect(..)
   -- ** Stringy stuff
 , parseHeaderMaybe
@@ -193,6 +196,9 @@ instance forall sublayout context events.
 
 -- | Type function that reflects a kind to a type.
 type family Demote' (kparam :: KProxy k) :: *
+
+-- | Convient alias for 'Demote'' that allows us to avoid using 'KProxy'
+-- explicitly.
 type Demote (a :: k) = Demote' ('KProxy :: KProxy k)
 
 type instance Demote' ('KProxy :: KProxy Symbol) = String
@@ -283,6 +289,11 @@ parseHeaderMaybe = eitherMaybe . parseHeader where
     Left _ -> Nothing
     Right x -> Just x
 
+-- | Determines whether a given webhook event matches a given raw
+-- representation of one. The result is 'Nothing' if there is no match. This
+-- function accounts for the 'WebhookWildcardEvent' matching everything, so it
+-- returns the result of parsing the raw representation when trying to match
+-- against the wildcard.
 matchEvent :: RepoWebhookEvent -> BS.ByteString -> Maybe RepoWebhookEvent
 matchEvent WebhookWildcardEvent s = decode' (fromStrict s)
 matchEvent e name
