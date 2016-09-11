@@ -10,13 +10,11 @@ Features:
   * Automatic verification of request signatures.
 
 See the
-[documentation](https://hackage.haskell.org/package/servant-github-webhook-0.1.0.0/docs/Servant/GitHub/Webhook.html)
+[documentation](https://hackage.haskell.org/package/servant-github-webhook-0.2.0.0/docs/Servant/GitHub/Webhook.html)
 for more details about how the library works, and how to use it.
 
 TODO
 -----
 
-  * Per-route `GitHubKey`, so that a single server can handle webhooks with
-    different keys.
   * `servant-client` and `servant-docs` instances.
   * Tests.
