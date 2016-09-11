@@ -10,7 +10,7 @@ Features:
   * Automatic verification of request signatures.
 
 See the
-[documentation](https://hackage.haskell.org/package/servant-github-webhook-0.2.0.0/docs/Servant/GitHub/Webhook.html)
+[documentation](https://hackage.haskell.org/package/servant-github-webhook-0.2.0.0/docs/Servant-GitHub-Webhook.html)
 for more details about how the library works, and how to use it.
 
 TODO
