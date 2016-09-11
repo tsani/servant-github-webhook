@@ -49,3 +49,35 @@ library
     Crypto >=4.2 && <4.3,
     base16-bytestring >=0.1 && <0.2,
     string-conversions >=0.4 && <0.5
+
+test-suite multikey
+  type:                exitcode-stdio-1.0
+  ghc-options:
+    -Wall
+  hs-source-dirs:      test/multikey
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:
+    aeson,
+    base,
+    bytestring,
+    servant-server,
+    servant-github-webhook,
+    wai,
+    warp
+
+test-suite singlekey
+  type:                exitcode-stdio-1.0
+  ghc-options:
+    -Wall
+  hs-source-dirs:      test/singlekey
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:
+    aeson,
+    base,
+    bytestring,
+    servant-server,
+    servant-github-webhook,
+    wai,
+    warp
