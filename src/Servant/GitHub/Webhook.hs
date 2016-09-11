@@ -9,23 +9,33 @@ Stability   : experimental
 The GitHub webhook machinery will attach three headers to the HTTP requests
 that it fires: @X-Github-Event@, @X-Hub-Signature@, and @X-Github-Delivery@.
 The former two headers correspond with the 'GitHubEvent' and
-'GitHubSignedReqBody' routing combinators. This library ignores the
-@X-Github-Delivery@ header for the most part; if you would like to access its
-value, then use the builtin 'Header' combinator from servant.
+'GitHubSignedReqBody''' routing combinators. This library ignores the
+@X-Github-Delivery@ header; if you would like to access its value, then use the
+builtin 'Header' combinator from Servant.
 
 Usage of the library is straightforward: protect routes with the 'GitHubEvent'
 combinator to ensure that the route is only reached for specific
 'RepoWebhookEvent's, and replace any 'ReqBody' combinators you would write
-under that route with 'GitHubSignedReqBody'. It is advised to always include a
-'GitHubSignedReqBody', as this is the only way you can be sure that it is
+under that route with 'GitHubSignedReqBody'''. It is advised to always include
+a 'GitHubSignedReqBody''', as this is the only way you can be sure that it is
 GitHub who is sending the request, and not a malicious user. If you don't care
 about the request body, then simply use Aeson\'s 'Object' type as the
-deserialization target -- @GitHubSignedReqBody \'[JSON] Object@ -- and ignore
-the @Object@ in the handler.
+deserialization target -- @GitHubSignedReqBody' key '[JSON] Object@ -- and
+ignore the @Object@ in the handler.
 
 The 'GitHubSignedReqBody' combinator makes use of the Servant 'Context' in
 order to extract the signing key. This is the same key that must be entered in
-the configuration of the webhook on GitHub. See 'GitHubKey' for more details.
+the configuration of the webhook on GitHub. See 'GitHubKey\'' for more details.
+
+In order to support multiple keys on a per-route basis, the basic combinator
+@GitHubSignedReqBody''@ takes as a type parameter as a key index. To use this,
+create a datatype, e.g. @KeyIndex@ whose constructors identify the different
+keys you will be using. Generally, this means one constructor per repository.
+Use the @DataKinds@ extension to promote this datatype to a kind, and write an
+instance of 'Reflect' for each promoted constructor of your datatype. Finally,
+create a 'Context' containing 'GitHubKey'' whose wrapped function's domain is
+the datatype you've built up. Thus, your function can determine which key to
+retrieve.
 -}
 
 {-# LANGUAGE DataKinds #-}
@@ -43,27 +53,43 @@ the configuration of the webhook on GitHub. See 'GitHubKey' for more details.
 
 module Servant.GitHub.Webhook
 ( -- * Servant combinators
-  GitHubSignedReqBody
+  GitHubSignedReqBody''
+, GitHubSignedReqBody'
+, GitHubSignedReqBody
 , GitHubEvent
 
   -- ** Security
-, GitHubKey(..)
+, GitHubKey'(..)
+, GitHubKey
+, gitHubKey
 
-  -- ** Example
+  -- * Reexports
   --
-  -- $example
-
-  -- * GitHub library reexports
+  -- | We reexport a few datatypes that are typically needed to use the
+  -- library.
 , RepoWebhookEvent(..)
+, KProxy(..)
 
   -- * Implementation details
+
   -- ** Type-level programming machinery
 , Demote
 , Demote'
 , Reflect(..)
+
   -- ** Stringy stuff
 , parseHeaderMaybe
 , matchEvent
+
+  -- * Examples
+  --
+  -- *** Using a global key
+  --
+  -- $example1
+  --
+  -- *** Using multiple keys
+  --
+  -- $example2
 ) where
 
 import Control.Monad.IO.Class ( liftIO )
@@ -72,7 +98,9 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
 import Data.HMAC ( hmac_sha1 )
+import Data.List ( intercalate )
 import Data.Maybe ( catMaybes, fromMaybe )
+import Data.Monoid ( (<>) )
 import Data.Proxy
 import Data.String.Conversions ( cs )
 import qualified Data.Text.Encoding as E
@@ -89,13 +117,33 @@ import Servant.Server.Internal
 -- verify the signature provided by GitHub in the @X-Hub-Signature@ header by
 -- computing the SHA1 HMAC of the request body and comparing.
 --
--- The use of this combinator will require that the router context contain a
--- 'GitHubKey' entry. Consequently, it will be necessary to use
+-- The use of this combinator will require that the router context contain an
+-- appropriate 'GitHubKey'' entry. Specifically, the type parameter of
+-- 'GitHubKey'' must correspond with @Demote k$ where @k@ is the kind of the
+-- index @key@ used here. Consequently, it will be necessary to use
 -- 'serveWithContext' instead of 'serve'.
 --
 -- Other routes are not tried upon the failure of this combinator, and a 401
 -- response is generated.
-data GitHubSignedReqBody (list :: [*]) (result :: *) where
+--
+-- Use of this datatype directly is discouraged, since the choice of the index
+-- @key@ determines @k@ and hence @proxy@. Instead, use 'GitHubSignedReqBody'',
+-- which computes the proxy argument given just @key$. The proxy argument is
+-- necessary to avoid @UndecidableInstances@ for the implementation of the
+-- 'HasServer' instance for the datatype.
+data GitHubSignedReqBody''
+  (proxy :: KProxy k)
+  (key :: k)
+  (list :: [*])
+  (result :: *) where
+
+-- | Convenient synonym for 'GitHubSignedReqBody''' that computes its first
+-- type argument given just the second one.
+type GitHubSignedReqBody' (key :: k)
+  = GitHubSignedReqBody'' ('KProxy :: KProxy k) key
+
+-- | A convenient alias for a trivial key index.
+type GitHubSignedReqBody = GitHubSignedReqBody' '()
 
 -- | A routing combinator that succeeds only for a webhook request that matches
 -- one of the given 'RepoWebhookEvent' given in the type-level list @events@.
@@ -117,20 +165,44 @@ data GitHubEvent (events :: [RepoWebhookEvent]) where
 --
 -- We allow the use of @IO@ here so that you can fetch the key from a cache or
 -- a database. If the key is a constant or read only once, just use 'pure'.
-newtype GitHubKey = GitHubKey { unGitHubKey :: IO BS.ByteString }
+--
+-- The type @key@ used here must correspond with @'Demote' k@ where @k@ is the
+-- kind whose types are used as indices in 'GitHubSignedReqBody''.
+--
+-- If you don't care about indices and just want to write a webhooks using a
+-- global key, see 'GitHubKey' which fixes @key@ to @()@ and use 'gitHubKey',
+-- which fills the newtype with a constant function.
+newtype GitHubKey' key = GitHubKey { unGitHubKey :: key -> IO BS.ByteString }
 
-instance forall sublayout context list result.
+-- | A synonym for strategies producing so-called /global/ keys, in which the
+-- key index is simply @()@.
+type GitHubKey = GitHubKey' ()
+
+-- | Smart constructor for 'GitHubKey', for a so-called /global/ key.
+gitHubKey :: IO BS.ByteString -> GitHubKey
+gitHubKey = GitHubKey . const
+
+instance forall sublayout context list result (key :: k).
   ( HasServer sublayout context
-  , HasContextEntry context GitHubKey
+  , HasContextEntry context (GitHubKey' (Demote key))
+  , Reflect key
   , AllCTUnrender list result
   )
-  => HasServer (GitHubSignedReqBody list result :> sublayout) context where
+  => HasServer
+    (GitHubSignedReqBody'' ('KProxy :: KProxy k) key list result :> sublayout)
+    context where
 
-  type ServerT (GitHubSignedReqBody list result :> sublayout) m
+  type ServerT
+    (GitHubSignedReqBody'' ('KProxy :: KProxy k) key list result :> sublayout)
+    m
     = result -> ServerT sublayout m
 
   route
-    :: forall env. Proxy (GitHubSignedReqBody list result :> sublayout)
+    :: forall env.
+       Proxy (
+         GitHubSignedReqBody'' ('KProxy :: KProxy k) key list result
+         :> sublayout
+       )
     -> Context context
     -> Delayed env (result -> Server sublayout)
     -> Router env
@@ -139,10 +211,14 @@ instance forall sublayout context list result.
     where
       lookupSig = lookup "X-Hub-Signature"
 
+      keyIndex :: Demote key
+      keyIndex = reflect (Proxy :: Proxy key)
+
       go :: DelayedIO result
       go = withRequest $ \req -> do
         let hdrs = requestHeaders req
-        key <- BS.unpack <$> liftIO (unGitHubKey $ getContextEntry context)
+        key <- BS.unpack <$>
+          liftIO (unGitHubKey (getContextEntry context) keyIndex)
         msg <- BS.unpack <$> liftIO (toStrict <$> strictRequestBody req)
         let sig = B16.encode $ BS.pack $ hmac_sha1 key msg
         let contentTypeH = fromMaybe "application/octet-stream"
@@ -185,13 +261,17 @@ instance forall sublayout context events.
       events :: [RepoWebhookEvent]
       events = reflect (Proxy :: Proxy events)
 
+      eventNames :: String
+      eventNames = intercalate ", " $ (cs . encode) <$> events
+
       go :: DelayedIO RepoWebhookEvent
       go = withRequest $ \req -> do
         case lookupGHEvent (requestHeaders req) of
           Nothing -> delayedFail err401
-          Just h ->
+          Just h -> do
             case catMaybes $ map (`matchEvent` h) events of
-              [] -> delayedFail err400
+              [] -> delayedFail err404
+                { errBody = cs $ "supported events: " <> eventNames }
               (event:_) -> pure event
 
 -- | Type function that reflects a kind to a type.
@@ -201,6 +281,7 @@ type family Demote' (kparam :: KProxy k) :: *
 -- explicitly.
 type Demote (a :: k) = Demote' ('KProxy :: KProxy k)
 
+type instance Demote' ('KProxy :: KProxy ()) = ()
 type instance Demote' ('KProxy :: KProxy Symbol) = String
 type instance Demote' ('KProxy :: KProxy [k]) = [Demote' ('KProxy :: KProxy k)]
 type instance Demote' ('KProxy :: KProxy RepoWebhookEvent) = RepoWebhookEvent
@@ -211,6 +292,9 @@ class Reflect (a :: k) where
 
 instance KnownSymbol s => Reflect (s :: Symbol) where
   reflect = symbolVal
+
+instance Reflect '() where
+  reflect _ = ()
 
 instance Reflect '[] where
   reflect _ = []
@@ -256,6 +340,9 @@ instance Reflect 'WebhookMemberEvent where
 instance Reflect 'WebhookPageBuildEvent where
   reflect _ = WebhookPageBuildEvent
 
+instance Reflect 'WebhookPingEvent where
+  reflect _ = WebhookPingEvent
+
 instance Reflect 'WebhookPublicEvent where
   reflect _ = WebhookPublicEvent
 
@@ -295,23 +382,31 @@ parseHeaderMaybe = eitherMaybe . parseHeader where
 -- returns the result of parsing the raw representation when trying to match
 -- against the wildcard.
 matchEvent :: RepoWebhookEvent -> BS.ByteString -> Maybe RepoWebhookEvent
-matchEvent WebhookWildcardEvent s = decode' (fromStrict s)
+matchEvent WebhookWildcardEvent s = decode' (fromStrict s') where
+  s' = "\"" <> s <> "\""
 matchEvent e name
-  | toStrict (encode e) == name = Just e
+  | toStrict (encode e) == name' = Just e
   | otherwise = Nothing
+  where name' = "\"" <> name <> "\""
 
--- $example
+-- $example1
+-- > {-# LANGUAGE DataKinds #-}
+-- > {-# LANGUAGE TypeFamilies #-}
+-- > {-# LANGUAGE TypeOperators #-}
+-- >
+-- > import Control.Monad.IO.Class ( liftIO )
 -- > import Data.Aeson ( Object )
 -- > import qualified Data.ByteString as BS
+-- > import qualified Data.ByteString.Char8 as C8
+-- > import Servant
 -- > import Servant.GitHub.Webhook
--- > import Servant.Server
 -- > import Network.Wai ( Application )
 -- > import Network.Wai.Handler.Warp ( run )
 -- >
 -- > main :: IO ()
 -- > main = do
--- >   key <- BS.init <$> BS.readFile "hook-secret"
--- >   run 8080 (app (GitHubKey $ pure key))
+-- >   [key, _] <- C8.lines <$> BS.readFile "test/test-keys"
+-- >   run 8080 (app (gitHubKey $ pure key))
 -- >
 -- > app :: GitHubKey -> Application
 -- > app key
@@ -321,15 +416,88 @@ matchEvent e name
 -- >     server
 -- >
 -- > server :: Server API
--- > server = pushEvent
+-- > server = anyEvent
 -- >
--- > pushEvent :: RepoWebHookEvent -> Object -> Handler ()
--- > pushEvent _ _
--- >   = liftIO $ putStrLn "someone pushed to servant-github-webhook!"
+-- > anyEvent :: RepoWebhookEvent -> Object -> Handler ()
+-- > anyEvent e _
+-- >   = liftIO $ putStrLn $ "got event: " ++ show e
 -- >
 -- > type API
--- >   =
--- >   :<|> "servant-github-webhook"
+-- >   = "repo1"
 -- >     :> GitHubEvent '[ 'WebhookPushEvent ]
 -- >     :> GitHubSignedReqBody '[JSON] Object
 -- >     :> Post '[JSON] ()
+
+-- $example2
+-- > {-# LANGUAGE DataKinds #-}
+-- > {-# LANGUAGE TypeFamilies #-}
+-- > {-# LANGUAGE TypeOperators #-}
+-- >
+-- > module Main
+-- > ( main
+-- > ) where
+-- >
+-- > import Control.Monad.IO.Class ( liftIO )
+-- > import Data.Aeson ( Object )
+-- > import qualified Data.ByteString as BS
+-- > import qualified Data.ByteString.Char8 as C8
+-- > import Network.Wai ( Application )
+-- > import Network.Wai.Handler.Warp ( run )
+-- > import Servant
+-- > import Servant.GitHub.Webhook
+-- >
+-- > main :: IO ()
+-- > main = do
+-- >   [k1, k2] <- C8.lines <$> BS.readFile "test/test-keys"
+-- >   run 8080 (app (constKeys k1 k2))
+-- >
+-- > app :: MyGitHubKey -> Application
+-- > app k = serveWithContext api (k :. EmptyContext) server
+-- >
+-- > server :: Server WebhookApi
+-- > server = (repo1ping :<|> repo1any) :<|> repo2any
+-- >
+-- > repo1ping :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo1ping _ _ = liftIO $ putStrLn "got ping on repo1!"
+-- >
+-- > repo1any :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo1any e _ = liftIO $ putStrLn $ "got event on repo 1: " ++ show e
+-- >
+-- > repo2any :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo2any e _ = liftIO $ putStrLn $ "got event on repo 2: " ++ show e
+-- >
+-- > api :: Proxy WebhookApi
+-- > api = Proxy
+-- >
+-- > type WebhookApi
+-- >   = "repo1" :> (
+-- >       GitHubEvent '[ 'WebhookPingEvent ]
+-- >     :> GitHubSignedReqBody' 'Repo1 '[JSON] Object
+-- >     :> Post '[JSON] ()
+-- >     :<|>
+-- >       GitHubEvent '[ 'WebhookWildcardEvent ]
+-- >     :> GitHubSignedReqBody' 'Repo1 '[JSON] Object
+-- >     :> Post '[JSON] ()
+-- >   )
+-- >   :<|>
+-- >     "repo2"
+-- >     :> GitHubEvent '[ 'WebhookWildcardEvent ]
+-- >     :> GitHubSignedReqBody' 'Repo2 '[JSON] Object
+-- >     :> Post '[JSON] ()
+-- >
+-- > type MyGitHubKey = GitHubKey' Key
+-- >
+-- > data Key
+-- >   = Repo1
+-- >   | Repo2
+-- >
+-- > constKeys :: BS.ByteString -> BS.ByteString -> MyGitHubKey
+-- > constKeys k1 k2 = GitHubKey $ \k -> pure $ case k of
+-- >   Repo1 -> k1
+-- >   Repo2 -> k2
+-- >
+-- > type instance Demote' ('KProxy :: KProxy Key) = Key
+-- > instance Reflect 'Repo1 where
+-- >   reflect _ = Repo1
+-- > instance Reflect 'Repo2 where
+-- >   reflect _ = Repo2
