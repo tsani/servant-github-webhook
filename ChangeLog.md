@@ -1,5 +1,12 @@
 # Revision history for servant-github-webhook
 
+## 0.2.0.0  -- 2016-09-11
+
+* Generalize `GitHubSignedReqBody` combinator to `GitHubSignedReqBody''` to
+  allow for configuring multiple signing keys, on a per-route basis.
+* Make `GitHubKey` take a function instead of simply an `IO` action.
+* Reexport `KProxy`, to make writing `Demote'` instances easier.
+
 ## 0.1.0.0  -- 2016-09-10
 
 Initial release.
