@@ -1,5 +1,10 @@
 # Revision history for servant-github-webhook
 
+## 0.2.0.1  -- 2016-09-13
+
+* Improve documentation (formatting and typos) and examples (remove unnecessary
+  verbosity).
+
 ## 0.2.0.0  -- 2016-09-11
 
 * Generalize `GitHubSignedReqBody` combinator to `GitHubSignedReqBody''` to
