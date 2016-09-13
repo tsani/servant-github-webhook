@@ -16,16 +16,16 @@ builtin 'Header' combinator from Servant.
 Usage of the library is straightforward: protect routes with the 'GitHubEvent'
 combinator to ensure that the route is only reached for specific
 'RepoWebhookEvent's, and replace any 'ReqBody' combinators you would write
-under that route with 'GitHubSignedReqBody'''. It is advised to always include
-a 'GitHubSignedReqBody''', as this is the only way you can be sure that it is
+under that route with 'GitHubSignedReqBody'. It is advised to always include a
+'GitHubSignedReqBody''', as this is the only way you can be sure that it is
 GitHub who is sending the request, and not a malicious user. If you don't care
 about the request body, then simply use Aeson\'s 'Object' type as the
 deserialization target -- @GitHubSignedReqBody' key '[JSON] Object@ -- and
 ignore the @Object@ in the handler.
 
-The 'GitHubSignedReqBody' combinator makes use of the Servant 'Context' in
+The 'GitHubSignedReqBody''' combinator makes use of the Servant 'Context' in
 order to extract the signing key. This is the same key that must be entered in
-the configuration of the webhook on GitHub. See 'GitHubKey\'' for more details.
+the configuration of the webhook on GitHub. See 'GitHubKey'' for more details.
 
 In order to support multiple keys on a per-route basis, the basic combinator
 @GitHubSignedReqBody''@ takes as a type parameter as a key index. To use this,
@@ -83,11 +83,7 @@ module Servant.GitHub.Webhook
 
   -- * Examples
   --
-  -- *** Using a global key
-  --
   -- $example1
-  --
-  -- *** Using multiple keys
   --
   -- $example2
 ) where
@@ -113,13 +109,13 @@ import Servant.API.ContentTypes ( AllCTUnrender(..) )
 import Servant.Server.Internal
 
 
--- | A clone of Servant\'s 'ReqBody' combinator, except that it will also
+-- | A clone of Servant's 'ReqBody' combinator, except that it will also
 -- verify the signature provided by GitHub in the @X-Hub-Signature@ header by
 -- computing the SHA1 HMAC of the request body and comparing.
 --
 -- The use of this combinator will require that the router context contain an
 -- appropriate 'GitHubKey'' entry. Specifically, the type parameter of
--- 'GitHubKey'' must correspond with @Demote k$ where @k@ is the kind of the
+-- 'GitHubKey'' must correspond with @Demote k@ where @k@ is the kind of the
 -- index @key@ used here. Consequently, it will be necessary to use
 -- 'serveWithContext' instead of 'serve'.
 --
@@ -127,10 +123,10 @@ import Servant.Server.Internal
 -- response is generated.
 --
 -- Use of this datatype directly is discouraged, since the choice of the index
--- @key@ determines @k@ and hence @proxy@. Instead, use 'GitHubSignedReqBody'',
--- which computes the proxy argument given just @key$. The proxy argument is
--- necessary to avoid @UndecidableInstances@ for the implementation of the
--- 'HasServer' instance for the datatype.
+-- @key@ determines its kind @k@ and hence @proxy@, which is . Instead, use
+-- 'GitHubSignedReqBody'', which computes the @proxy@ argument given just
+-- @key@. The proxy argument is necessary to avoid @UndecidableInstances@ for
+-- the implementation of the 'HasServer' instance for the datatype.
 data GitHubSignedReqBody''
   (proxy :: KProxy k)
   (key :: k)
@@ -139,10 +135,17 @@ data GitHubSignedReqBody''
 
 -- | Convenient synonym for 'GitHubSignedReqBody''' that computes its first
 -- type argument given just the second one.
+--
+-- Use this type synonym if you are creating a webhook server to handle
+-- webhooks from multiple repositories, with different secret keys.
 type GitHubSignedReqBody' (key :: k)
   = GitHubSignedReqBody'' ('KProxy :: KProxy k) key
 
 -- | A convenient alias for a trivial key index.
+--
+-- USe this type synonym if you are creating a webhook server to handle only
+-- webhooks from a single repository, or for mutliple repositories using the
+-- same secret key.
 type GitHubSignedReqBody = GitHubSignedReqBody' '()
 
 -- | A routing combinator that succeeds only for a webhook request that matches
@@ -390,6 +393,9 @@ matchEvent e name
   where name' = "\"" <> name <> "\""
 
 -- $example1
+--
+-- === Using a global key
+--
 -- > {-# LANGUAGE DataKinds #-}
 -- > {-# LANGUAGE TypeFamilies #-}
 -- > {-# LANGUAGE TypeOperators #-}
@@ -429,6 +435,9 @@ matchEvent e name
 -- >     :> Post '[JSON] ()
 
 -- $example2
+--
+-- === Using multiple keys
+--
 -- > {-# LANGUAGE DataKinds #-}
 -- > {-# LANGUAGE TypeFamilies #-}
 -- > {-# LANGUAGE TypeOperators #-}
@@ -455,12 +464,10 @@ matchEvent e name
 -- > app k = serveWithContext api (k :. EmptyContext) server
 -- >
 -- > server :: Server WebhookApi
--- > server = (repo1ping :<|> repo1any) :<|> repo2any
--- >
--- > repo1ping :: RepoWebhookEvent -> Object -> Handler ()
--- > repo1ping _ _ = liftIO $ putStrLn "got ping on repo1!"
+-- > server = repo1any :<|> repo2any
 -- >
 -- > repo1any :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo1any WebhookPingEvent _ = liftIO $ putStrLn "got ping on repo1!"
 -- > repo1any e _ = liftIO $ putStrLn $ "got event on repo 1: " ++ show e
 -- >
 -- > repo2any :: RepoWebhookEvent -> Object -> Handler ()
@@ -470,15 +477,10 @@ matchEvent e name
 -- > api = Proxy
 -- >
 -- > type WebhookApi
--- >   = "repo1" :> (
--- >       GitHubEvent '[ 'WebhookPingEvent ]
+-- >   = "repo1"
+-- >     :> GitHubEvent '[ 'WebhookWildcardEvent ]
 -- >     :> GitHubSignedReqBody' 'Repo1 '[JSON] Object
 -- >     :> Post '[JSON] ()
--- >     :<|>
--- >       GitHubEvent '[ 'WebhookWildcardEvent ]
--- >     :> GitHubSignedReqBody' 'Repo1 '[JSON] Object
--- >     :> Post '[JSON] ()
--- >   )
 -- >   :<|>
 -- >     "repo2"
 -- >     :> GitHubEvent '[ 'WebhookWildcardEvent ]
