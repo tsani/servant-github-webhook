@@ -198,7 +198,7 @@ instance forall sublayout context list result (key :: k).
   type ServerT
     (GitHubSignedReqBody'' ('KProxy :: KProxy k) key list result :> sublayout)
     m
-    = result -> ServerT sublayout m
+    = (Demote key, result) -> ServerT sublayout m
 
   route
     :: forall env.
@@ -207,7 +207,7 @@ instance forall sublayout context list result (key :: k).
          :> sublayout
        )
     -> Context context
-    -> Delayed env (result -> Server sublayout)
+    -> Delayed env ((Demote key, result) -> Server sublayout)
     -> Router env
   route _ context subserver
     = route (Proxy :: Proxy sublayout) context (addBodyCheck subserver go)
@@ -217,7 +217,7 @@ instance forall sublayout context list result (key :: k).
       keyIndex :: Demote key
       keyIndex = reflect (Proxy :: Proxy key)
 
-      go :: DelayedIO result
+      go :: DelayedIO (Demote key, result)
       go = withRequest $ \req -> do
         let hdrs = requestHeaders req
         key <- BS.unpack <$>
@@ -238,7 +238,7 @@ instance forall sublayout context list result (key :: k).
             Just h -> do
               let h' = BS.drop 5 $ E.encodeUtf8 h -- remove "sha1=" prefix
               if h' == sig
-              then pure v
+              then pure (keyIndex, v)
               else delayedFailFatal err401
 
 instance forall sublayout context events.
@@ -428,7 +428,7 @@ matchEvent e name
 -- > server :: Server API
 -- > server = anyEvent
 -- >
--- > anyEvent :: RepoWebhookEvent -> Object -> Handler ()
+-- > anyEvent :: RepoWebhookEvent -> ((), Object) -> Handler ()
 -- > anyEvent e _
 -- >   = liftIO $ putStrLn $ "got event: " ++ show e
 -- >
@@ -470,11 +470,11 @@ matchEvent e name
 -- > server :: Server WebhookApi
 -- > server = repo1any :<|> repo2any
 -- >
--- > repo1any :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo1any :: RepoWebhookEvent -> (Key, Object) -> Handler ()
 -- > repo1any WebhookPingEvent _ = liftIO $ putStrLn "got ping on repo1!"
 -- > repo1any e _ = liftIO $ putStrLn $ "got event on repo 1: " ++ show e
 -- >
--- > repo2any :: RepoWebhookEvent -> Object -> Handler ()
+-- > repo2any :: RepoWebhookEvent -> (Key, Object) -> Handler ()
 -- > repo2any e _ = liftIO $ putStrLn $ "got event on repo 2: " ++ show e
 -- >
 -- > api :: Proxy WebhookApi
