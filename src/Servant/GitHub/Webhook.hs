@@ -400,6 +400,10 @@ matchEvent e name
 -- > {-# LANGUAGE TypeFamilies #-}
 -- > {-# LANGUAGE TypeOperators #-}
 -- >
+-- > module Main
+-- > ( main
+-- > ) where
+-- >
 -- > import Control.Monad.IO.Class ( liftIO )
 -- > import Data.Aeson ( Object )
 -- > import qualified Data.ByteString as BS
