@@ -1,5 +1,11 @@
 # Revision history for servant-github-webhook
 
+## 0.3.0.0  -- 2016-09-22
+
+* Pass reflected key index to the handler function for GitHubSignedReqBody.
+  This allows for more generic handler functions, as they can determine
+  programmatically which repository they are responding to.
+
 ## 0.2.0.1  -- 2016-09-13
 
 * Improve documentation (formatting and typos) and examples (remove unnecessary
