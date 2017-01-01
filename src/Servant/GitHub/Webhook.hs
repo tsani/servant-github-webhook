@@ -172,7 +172,7 @@ data GitHubEvent (events :: [RepoWebhookEvent]) where
 -- The type @key@ used here must correspond with @'Demote' k@ where @k@ is the
 -- kind whose types are used as indices in 'GitHubSignedReqBody''.
 --
--- If you don't care about indices and just want to write a webhooks using a
+-- If you don't care about indices and just want to write a webhook using a
 -- global key, see 'GitHubKey' which fixes @key@ to @()@ and use 'gitHubKey',
 -- which fills the newtype with a constant function.
 newtype GitHubKey' key = GitHubKey { unGitHubKey :: key -> IO BS.ByteString }
