@@ -12,7 +12,10 @@ import Network.Wai ( Application )
 import Network.Wai.Handler.Warp ( run )
 
 main :: IO ()
-main = do
+main = pure ()
+
+realMain :: IO ()
+realMain = do
   [key, _] <- C8.lines <$> BS.readFile "test/test-keys"
   run 8080 (app (gitHubKey $ pure key))
 
@@ -26,7 +29,7 @@ app key
 server :: Server API
 server = anyEvent
 
-anyEvent :: RepoWebhookEvent -> Object -> Handler ()
+anyEvent :: RepoWebhookEvent -> ((), Object) -> Handler ()
 anyEvent e _
   = liftIO $ putStrLn $ "got event: " ++ show e
 

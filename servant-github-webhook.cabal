@@ -19,7 +19,7 @@ maintainer:          servant-github-webhook@mail.jerrington.me
 copyright:           Jacob Thomas Errington 2016
 category:            Web
 build-type:          Simple
-tested-with:         GHC == 7.10.1, GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.1
+tested-with:         GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.1
 extra-source-files:
   ChangeLog.md
   README.md
@@ -31,7 +31,7 @@ source-repository head
 
 flag old-base
   description: whether to use base-4.8 and transformers rather than base 4.9
-  default: False
+  default: True
 
 library
   exposed-modules:
@@ -77,6 +77,10 @@ test-suite multikey
     wai,
     warp
 
+  if flag(old-base)
+    build-depends:
+      transformers >=0.2 && <0.6
+
 test-suite singlekey
   type:                exitcode-stdio-1.0
   ghc-options:
@@ -92,3 +96,7 @@ test-suite singlekey
     servant-github-webhook,
     wai,
     warp
+
+  if flag(old-base)
+    build-depends:
+      transformers >=0.2 && <0.6
