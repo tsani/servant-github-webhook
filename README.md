@@ -14,7 +14,7 @@ Features:
   * Route protection expressed in the type system, so webhook routes are
     regular routes cannot be confused.
 
-[hackage]: https://hackage.haskell.com/package/servant-github-webhook
+[hackage]: https://hackage.haskell.org/package/servant-github-webhook
 [badge-hackage]: https://img.shields.io/hackage/v/servant-github-webhook.svg
 [travis]: https://travis-ci.org/tsani/servant-github-webhook?branch=master
 [badge-travis]: https://travis-ci.org/tsani/servant-github-webhook.svg?branch=master
