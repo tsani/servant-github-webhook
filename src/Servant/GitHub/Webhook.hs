@@ -38,8 +38,6 @@ the datatype you've built up. Thus, your function can determine which key to
 retrieve.
 -}
 
-{-# LANGUAGE CPP #-}
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -54,16 +52,6 @@ retrieve.
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-
--- GHC 8 seems to have improved its decidability check for type family
--- instances and class instances. In particular, without UndecidableInstances
--- enabled, the Demote' instance for lists, which we need, will not compile.
--- Similarly, the Reflect instance for Symbol, which just requires KnownSymbol,
--- won't compile on GHC < 8 because the instance head is no smaller than the
--- instance head.
-#if __GLASGOW_HASKELL__ < 800
-{-# LANGUAGE UndecidableInstances #-}
-#endif
 
 module Servant.GitHub.Webhook
 ( -- * Servant combinators
