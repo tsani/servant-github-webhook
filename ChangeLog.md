@@ -1,5 +1,12 @@
 # Revision history for servant-github-webhook
 
+## 0.3.1.0  -- 2017-08-06
+
+* Drop support for GHC <8.
+* Drop support for Servant <0.11.
+* Switch from Crypto package to cryptonite package.
+* Now servant-github-webhook builds with stack.
+
 ## 0.3.0.0  -- 2016-09-22
 
 * Pass reflected key index to the handler function for GitHubSignedReqBody.

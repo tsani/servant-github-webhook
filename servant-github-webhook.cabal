@@ -2,7 +2,7 @@
 -- further documentation, see http://haskell.org/cabal/users-guide/
 
 name:                servant-github-webhook
-version:             0.3.0.2
+version:             0.3.1.0
 synopsis:            Servant combinators to facilitate writing GitHub webhooks.
 description:
   This package provides servant combinators that make writing safe GitHub
