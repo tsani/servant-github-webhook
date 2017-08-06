@@ -48,8 +48,10 @@ retrieve.
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -101,11 +103,13 @@ module Servant.GitHub.Webhook
 ) where
 
 import Control.Monad.IO.Class ( liftIO )
+import Crypto.Hash.Algorithms ( SHA1 )
+import Crypto.MAC.HMAC ( hmac, HMAC(..) )
 import Data.Aeson ( decode', encode )
+import Data.ByteArray ( convert )
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
-import Data.HMAC ( hmac_sha1 )
 import Data.List ( intercalate )
 import Data.Maybe ( catMaybes, fromMaybe )
 import Data.Monoid ( (<>) )
@@ -222,36 +226,45 @@ instance forall sublayout context list result (key :: k).
     -> Delayed env ((Demote key, result) -> Server sublayout)
     -> Router env
   route _ context subserver
-    = route (Proxy :: Proxy sublayout) context (addBodyCheck subserver go)
+    = route (Proxy :: Proxy sublayout) context (addBodyCheck subserver ct go)
     where
       lookupSig = lookup "X-Hub-Signature"
 
       keyIndex :: Demote key
       keyIndex = reflect (Proxy :: Proxy key)
 
-      go :: DelayedIO (Demote key, result)
-      go = withRequest $ \req -> do
+      ct :: DelayedIO (BS.ByteString, Maybe BS.ByteString, result)
+      ct = withRequest $ \req -> do
         let hdrs = requestHeaders req
-        key <- BS.unpack <$>
-          liftIO (unGitHubKey (getContextEntry context) keyIndex)
-        msg <- BS.unpack <$> liftIO (toStrict <$> strictRequestBody req)
-        let sig = B16.encode $ BS.pack $ hmac_sha1 key msg
-        let contentTypeH = fromMaybe "application/octet-stream"
-                         $ lookup hContentType $ hdrs
+        let contentTypeH =
+              fromMaybe "application/octet-stream" $ lookup hContentType hdrs
+
+        msg <- liftIO (toStrict <$> strictRequestBody req)
+
         let mrqbody =
               handleCTypeH (Proxy :: Proxy list) (cs contentTypeH) $
-              fromStrict (BS.pack msg)
+              fromStrict msg
 
         case mrqbody of
           Nothing -> delayedFailFatal err415
           Just (Left e) -> delayedFailFatal err400 { errBody = cs e }
-          Just (Right v) -> case parseHeaderMaybe =<< lookupSig hdrs of
-            Nothing -> delayedFailFatal err401
-            Just h -> do
-              let h' = BS.drop 5 $ E.encodeUtf8 h -- remove "sha1=" prefix
-              if h' == sig
-              then pure (keyIndex, v)
-              else delayedFailFatal err401
+          Just (Right v) -> pure (msg, lookupSig hdrs, v)
+
+      go
+        :: (BS.ByteString, Maybe BS.ByteString, result)
+        -> DelayedIO (Demote key, result)
+      go (msg, hdr, v) = do
+        key <- liftIO (unGitHubKey (getContextEntry context) keyIndex)
+        let sig =
+              B16.encode $ convert $ hmacGetDigest $ hmac @_ @_ @SHA1 key msg
+
+        case parseHeaderMaybe =<< hdr of
+          Nothing -> delayedFailFatal err401
+          Just h -> do
+            let h' = BS.drop 5 $ E.encodeUtf8 h -- remove "sha1=" prefix
+            if h' == sig
+            then pure (keyIndex, v)
+            else delayedFailFatal err401
 
 instance forall sublayout context events.
   (Reflect events, HasServer sublayout context)
