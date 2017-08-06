@@ -41,11 +41,6 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps: []
 
-# Override default flag values for local packages and extra-deps
-flags:
-  servant-github-webhook:
-    old-base: false
-
 # Extra package databases containing global packages
 extra-package-dbs: []
 

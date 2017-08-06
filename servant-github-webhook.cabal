@@ -29,10 +29,6 @@ source-repository head
   type: git
   location: https://github.com/tsani/servant-github-webhook.git
 
-flag old-base
-  description: whether to use base-4.8 and transformers rather than base 4.9
-  default: True
-
 library
   exposed-modules:
     Servant.GitHub.Webhook
@@ -42,6 +38,7 @@ library
     -Wall
   build-depends:
     aeson >=0.11 && <1.2,
+    base >=4.9 && <4.10,
     base16-bytestring >=0.1 && <0.2,
     bytestring >= 0.10 && <0.11,
     cryptonite >=0.23 && <0.25,
@@ -53,14 +50,6 @@ library
     string-conversions >=0.4 && <0.5,
     text >=1.2 && <1.3,
     wai >=3.2 && <3.3
-
-  if flag(old-base)
-    build-depends:
-      base >=4.8 && <4.9,
-      transformers >=0.2 && <0.6
-  else
-    build-depends:
-      base >=4.9 && <4.10
 
 test-suite multikey
   type:                exitcode-stdio-1.0
@@ -78,10 +67,6 @@ test-suite multikey
     wai,
     warp
 
-  if flag(old-base)
-    build-depends:
-      transformers >=0.2 && <0.6
-
 test-suite singlekey
   type:                exitcode-stdio-1.0
   ghc-options:
@@ -97,7 +82,3 @@ test-suite singlekey
     servant-github-webhook,
     wai,
     warp
-
-  if flag(old-base)
-    build-depends:
-      transformers >=0.2 && <0.6
