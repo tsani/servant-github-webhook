@@ -23,6 +23,7 @@ tested-with:         GHC == 8.0.1, GHC == 8.2.2
 extra-source-files:
   ChangeLog.md
   README.md
+  stack.yaml
 cabal-version:       >=1.10
 bug-reports:         https://github.com/tsani/servant-github-webhook/issues
 
