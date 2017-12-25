@@ -1,5 +1,10 @@
 # Revision history for servant-github-webhook
 
+## 0.3.2.0  -- 2017-12-25
+
+* Support GHC 8.2 / `base` 4.10.
+* Bump up version bound for `github` to 0.18.
+
 ## 0.3.1.0  -- 2017-08-06
 
 * Drop support for GHC <8.
