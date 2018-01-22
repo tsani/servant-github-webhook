@@ -94,7 +94,7 @@ import Control.Monad.IO.Class ( liftIO )
 import Crypto.Hash.Algorithms ( SHA1 )
 import Crypto.MAC.HMAC ( hmac, HMAC(..) )
 import Data.Aeson ( decode', encode )
-import Data.ByteArray ( convert )
+import Data.ByteArray ( convert, constEq )
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
@@ -250,7 +250,7 @@ instance forall sublayout context list result (key :: k).
           Nothing -> delayedFailFatal err401
           Just h -> do
             let h' = BS.drop 5 $ E.encodeUtf8 h -- remove "sha1=" prefix
-            if h' == sig
+            if constEq h' sig
             then pure (keyIndex, v)
             else delayedFailFatal err401
 
