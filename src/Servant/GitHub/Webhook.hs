@@ -64,6 +64,8 @@ module Servant.GitHub.Webhook
 , GitHubKey'(..)
 , GitHubKey
 , gitHubKey
+, dynamicKey
+, repositoryKey, HasRepository
 
   -- * Reexports
   --
@@ -93,11 +95,14 @@ module Servant.GitHub.Webhook
 import Control.Monad.IO.Class ( liftIO )
 import Crypto.Hash.Algorithms ( SHA1 )
 import Crypto.MAC.HMAC ( hmac, HMAC(..) )
-import Data.Aeson ( decode', encode )
+import Data.Aeson ( decode', encode, Value(String, Object) )
+import qualified Data.Aeson.Types as AesonType
 import Data.ByteArray ( convert, constEq )
+import qualified Data.Text as T
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.HashMap.Strict as HashMap
 import Data.List ( intercalate )
 import Data.Maybe ( catMaybes, fromMaybe )
 import Data.Monoid ( (<>) )
@@ -179,19 +184,50 @@ data GitHubEvent (events :: [RepoWebhookEvent]) where
 -- If you don't care about indices and just want to write a webhook using a
 -- global key, see 'GitHubKey' which fixes @key@ to @()@ and use 'gitHubKey',
 -- which fills the newtype with a constant function.
-newtype GitHubKey' key = GitHubKey { unGitHubKey :: key -> IO BS.ByteString }
+newtype GitHubKey' key result = GitHubKey { unGitHubKey :: key -> result -> IO (Maybe BS.ByteString) }
 
 -- | A synonym for strategies producing so-called /global/ keys, in which the
 -- key index is simply @()@.
-type GitHubKey = GitHubKey' ()
+type GitHubKey result = GitHubKey' () result
 
 -- | Smart constructor for 'GitHubKey', for a so-called /global/ key.
-gitHubKey :: IO BS.ByteString -> GitHubKey
-gitHubKey = GitHubKey . const
+gitHubKey :: IO BS.ByteString -> GitHubKey result
+gitHubKey f = GitHubKey (\_ _ -> Just <$> f)
+
+-- | @dynamicKey keyLookup keyIdLookup@ acquires the key identifier, such as
+-- repository or user name, from the result then uses @keyLookup@ to acquire the
+-- key (or @Nothing@).
+--
+-- Dynamic keys allow servers to specify per-user repository keys.  This
+-- limits the impact of compromized keys and allows the server to acquire the
+-- key from external sources, such as a live configuration or per-user rows
+-- in a database.
+dynamicKey :: (T.Text -> IO (Maybe BS.ByteString)) -> (result -> Maybe T.Text) -> GitHubKey result
+dynamicKey f lk = GitHubKey (\_ r -> maybe (pure Nothing) f (lk r))
+
+repositoryKey :: HasRepository result => (T.Text -> IO (Maybe BS.ByteString)) -> GitHubKey result
+repositoryKey f = dynamicKey f getFullName
+
+-- | The HasRepository class helps extract the full (unique) "name/repo" of a
+-- repository, allowing easy lookup of a per-repository key or, using @takeWhile
+-- (/='/')@, lookup of per user keys.
+class HasRepository r where
+    -- | Extract the @repository.full_name@ field of github json web events.
+    getFullName:: r -> Maybe T.Text
+
+instance HasRepository Value where
+    getFullName (Object o) = getFullName o
+    getFullName _ = Nothing
+
+instance HasRepository AesonType.Object where
+    getFullName o =
+        do Object r <- HashMap.lookup "repository" o
+           String n <- HashMap.lookup "full_name" r
+           pure n
 
 instance forall sublayout context list result (key :: k).
   ( HasServer sublayout context
-  , HasContextEntry context (GitHubKey' (Demote key))
+  , HasContextEntry context (GitHubKey' (Demote key) result)
   , Reflect key
   , AllCTUnrender list result
   )
@@ -241,8 +277,17 @@ instance forall sublayout context list result (key :: k).
       go
         :: (BS.ByteString, Maybe BS.ByteString, result)
         -> DelayedIO (Demote key, result)
-      go (msg, hdr, v) = do
-        key <- liftIO (unGitHubKey (getContextEntry context) keyIndex)
+      go tup@(_msg, _hdr, v) = do
+        keyM <- liftIO (unGitHubKey (getContextEntry context) keyIndex v)
+        case keyM of
+            Nothing -> delayedFailFatal err401
+            Just key -> verifySigWithKey tup key
+
+      verifySigWithKey
+            :: (BS.ByteString, Maybe BS.ByteString, result)
+            -> BS.ByteString
+            -> DelayedIO (Demote key, result)
+      verifySigWithKey (msg, hdr, v) key = do
         let sig =
               B16.encode $ convert $ hmacGetDigest $ hmac @_ @_ @SHA1 key msg
 
