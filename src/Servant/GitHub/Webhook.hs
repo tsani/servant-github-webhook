@@ -96,6 +96,7 @@ import Control.Monad.IO.Class ( liftIO )
 import Crypto.Hash.Algorithms ( SHA1 )
 import Crypto.MAC.HMAC ( hmac, HMAC(..) )
 import Data.Aeson ( decode', encode, Value(String, Object) )
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonType
 import Data.ByteArray ( convert, constEq )
 import qualified Data.Text as T
@@ -242,6 +243,9 @@ instance HasRepository AesonType.Object where
 -- handler (eventOf -> e) = -- ... expr handling e :: IssuesEvent ...
 -- @
 newtype EventWithHookRepo e = EventWithHookRepo { eventOf :: e }
+
+instance Aeson.FromJSON e => Aeson.FromJSON (EventWithHookRepo e) where
+    parseJSON o = EventWithHookRepo <$> Aeson.parseJSON o
 
 instance EventHasRepo e => HasRepository (EventWithHookRepo e) where
     getFullName = Just . whRepoFullName . repoForEvent . eventOf
