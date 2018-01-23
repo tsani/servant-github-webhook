@@ -111,6 +111,8 @@ import Data.String.Conversions ( cs )
 import qualified Data.Text.Encoding as E
 import GHC.TypeLits
 import GitHub.Data.Webhooks
+import GitHub.Data.Webhooks.Events (EventHasRepo(..)) -- github-webhooks package
+import GitHub.Data.Webhooks.Payload (whRepoFullName) -- github-webhooks package
 import Network.HTTP.Types hiding (Header, ResponseHeaders)
 import Network.Wai ( requestHeaders, strictRequestBody )
 import Servant
@@ -224,6 +226,25 @@ instance HasRepository AesonType.Object where
         do Object r <- HashMap.lookup "repository" o
            String n <- HashMap.lookup "full_name" r
            pure n
+
+-- |For use with 'github-webhooks' package types.  Routes would look like:
+--
+-- @
+--      api = "github-webevent" :> 
+--          :> GitHubSignedReqBody '[JSON] (EventWithHookRepo IssuesEvent)
+--          :> Post '[JSON] ()
+-- @
+--
+-- And the handler would unwrap the event:
+--
+-- @
+-- handler :: EventWithHookRepo IssuesEvent -> Handler ()
+-- handler (eventOf -> e) = -- ... expr handling e :: IssuesEvent ...
+-- @
+newtype EventWithHookRepo e = EventWithHookRepo { eventOf :: e }
+
+instance EventHasRepo e => HasRepository (EventWithHookRepo e) where
+    getFullName = Just . whRepoFullName . repoForEvent . eventOf
 
 instance forall sublayout context list result (key :: k).
   ( HasServer sublayout context
