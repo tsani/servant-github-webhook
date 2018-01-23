@@ -64,6 +64,7 @@ module Servant.GitHub.Webhook
 , GitHubKey'(..)
 , GitHubKey
 , gitHubKey
+, dynamicKey
 
   -- * Reexports
   --
@@ -93,11 +94,13 @@ module Servant.GitHub.Webhook
 import Control.Monad.IO.Class ( liftIO )
 import Crypto.Hash.Algorithms ( SHA1 )
 import Crypto.MAC.HMAC ( hmac, HMAC(..) )
-import Data.Aeson ( decode', encode )
+import Data.Aeson ( decodeStrict', decode', encode, Value(String) )
 import Data.ByteArray ( convert )
+import qualified Data.Text as T
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.HashMap.Strict as HashMap
 import Data.List ( intercalate )
 import Data.Maybe ( catMaybes, fromMaybe )
 import Data.Monoid ( (<>) )
@@ -179,7 +182,7 @@ data GitHubEvent (events :: [RepoWebhookEvent]) where
 -- If you don't care about indices and just want to write a webhook using a
 -- global key, see 'GitHubKey' which fixes @key@ to @()@ and use 'gitHubKey',
 -- which fills the newtype with a constant function.
-newtype GitHubKey' key = GitHubKey { unGitHubKey :: key -> IO BS.ByteString }
+newtype GitHubKey' key = GitHubKey { unGitHubKey :: key -> Maybe T.Text -> IO BS.ByteString }
 
 -- | A synonym for strategies producing so-called /global/ keys, in which the
 -- key index is simply @()@.
@@ -187,7 +190,14 @@ type GitHubKey = GitHubKey' ()
 
 -- | Smart constructor for 'GitHubKey', for a so-called /global/ key.
 gitHubKey :: IO BS.ByteString -> GitHubKey
-gitHubKey = GitHubKey . const
+gitHubKey f = GitHubKey (\_ _ -> f)
+
+-- | Dynamic keys allow servers to specify per-user repository keys.  This
+-- limits the impact of compromized keys and allows the server to acquire the
+-- key from external sources, such as a live configuration or per-user rows
+-- in a database.
+dynamicKey :: (Maybe T.Text -> IO BS.ByteString) -> GitHubKey
+dynamicKey f = GitHubKey (const f)
 
 instance forall sublayout context list result (key :: k).
   ( HasServer sublayout context
@@ -242,7 +252,12 @@ instance forall sublayout context list result (key :: k).
         :: (BS.ByteString, Maybe BS.ByteString, result)
         -> DelayedIO (Demote key, result)
       go (msg, hdr, v) = do
-        key <- liftIO (unGitHubKey (getContextEntry context) keyIndex)
+        let username = do
+                t <- HashMap.lookup @T.Text "login" =<< decodeStrict' msg
+                case t of
+                    String s -> Just s
+                    _        -> Nothing
+        key <- liftIO (unGitHubKey (getContextEntry context) keyIndex username)
         let sig =
               B16.encode $ convert $ hmacGetDigest $ hmac @_ @_ @SHA1 key msg
 
