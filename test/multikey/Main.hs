@@ -60,16 +60,16 @@ type WebhookApi
       :> GitHubSignedReqBody' 'Repo2 '[JSON] Object
       :> Post '[JSON] ()
 
-type MyGitHubKey = GitHubKey' Key
+type MyGitHubKey = GitHubKey' Key Object
 
 data Key
   = Repo1
   | Repo2
 
 constKeys :: BS.ByteString -> BS.ByteString -> MyGitHubKey
-constKeys k1 k2 = GitHubKey $ \k -> pure $ case k of
-  Repo1 -> k1
-  Repo2 -> k2
+constKeys k1 k2 = GitHubKey $ \k _ -> pure $ case k of
+  Repo1 -> Just k1
+  Repo2 -> Just k2
 
 type instance Demote' ('KProxy :: KProxy Key) = Key
 instance Reflect 'Repo1 where
