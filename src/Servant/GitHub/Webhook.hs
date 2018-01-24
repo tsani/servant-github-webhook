@@ -66,6 +66,7 @@ module Servant.GitHub.Webhook
 , gitHubKey
 , dynamicKey
 , repositoryKey, HasRepository
+, EventWithHookRepo(..)
 
   -- * Reexports
   --
