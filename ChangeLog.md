@@ -1,5 +1,10 @@
 # Revision history for servant-github-webhook
 
+## 0.4.0.0  -- 2018-02-03
+
+* Use constant-time equality to check signatures.
+* Add dynamic key capabilities.
+
 ## 0.3.2.0  -- 2017-12-25
 
 * Support GHC 8.2 / `base` 4.10.
