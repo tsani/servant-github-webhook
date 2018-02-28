@@ -1,4 +1,1 @@
-resolver: lts-10.3
-extra-deps:
-    - git: https://github.com/onrock-eng/github-webhooks
-      commit: 9d5bf07029ed99fca5e53123c7a9c8a8af9819bc
+resolver: nightly-2018-03-01
