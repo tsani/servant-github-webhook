@@ -3,6 +3,8 @@ servant-github-webhook
 
 [![Build Status][badge-travis]][travis]
 [![Hackage][badge-hackage]][hackage]
+[![servant-github-webhook][badge-stackage-lts]][stackage-lts]
+[![servant-github-webhook][badge-stackage-nightly]][stackage-nightly]
 
 This library facilitates writing Servant routes that can safely act as GitHub
 webhooks.
@@ -31,3 +33,8 @@ it does, then the request is legitimate.
 [badge-hackage]: https://img.shields.io/hackage/v/servant-github-webhook.svg
 [travis]: https://travis-ci.org/tsani/servant-github-webhook?branch=master
 [badge-travis]: https://travis-ci.org/tsani/servant-github-webhook.svg?branch=master
+
+[badge-stackage-lts]: http://stackage.org/package/servant-github-webhook/badge/lts
+[stackage-lts]: https://stackage.org/lts/package/servant-github-webhook
+[badge-stackage-nightly]: http://stackage.org/package/servant-github-webhook/badge/nightly
+[stackage-nightly]: http://stackage.org/nightly/package/servant-github-webhook
