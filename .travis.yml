@@ -18,9 +18,8 @@ before_install:
 
 install:
   - stack --version
-  - stack --no-terminal setup
-  - stack --no-terminal build --only-snapshot
-  - stack --no-terminal install
+  - stack --no-terminal build --resolver lts-10.8
+  - stack --no-terminal build
 
 # Here starts the actual work to be performed for the package under test;
 # any command which exits with a non-zero exit code causes the build to fail.

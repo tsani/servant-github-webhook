@@ -19,7 +19,7 @@ maintainer:          servant-github-webhook@mail.jerrington.me
 copyright:           Jacob Thomas Errington (c) 2016-2018
 category:            Web
 build-type:          Simple
-tested-with:         GHC == 8.2.2
+tested-with:         GHC == 7.10.3, GHC == 8.2.2
 extra-source-files:
   ChangeLog.md
   README.md
@@ -43,16 +43,17 @@ library
     aeson >=0.11,
     base16-bytestring >=0.1,
     bytestring >= 0.10,
-    cryptonite >=0.23,
+    cryptonite >=0.19,
     github >=0.15,
     github-webhooks >=0.9,
     http-types >=0.9,
     unordered-containers >= 0.2,
-    memory >=0.14,
-    servant >=0.11,
-    servant-server >=0.11,
+    memory >=0.13,
+    servant >=0.11 && < 0.12,
+    servant-server >=0.11 && < 0.12,
     string-conversions >=0.4,
     text >=1.2,
+    transformers,
     wai >=3.2
 
 test-suite multikey
@@ -69,7 +70,8 @@ test-suite multikey
     servant-server,
     servant-github-webhook,
     wai,
-    warp
+    warp,
+    transformers
 
 test-suite singlekey
   type:                exitcode-stdio-1.0
@@ -85,7 +87,8 @@ test-suite singlekey
     servant-server,
     servant-github-webhook,
     wai,
-    warp
+    warp,
+    transformers
 
 test-suite dynamickey
   type:                exitcode-stdio-1.0
@@ -102,4 +105,5 @@ test-suite dynamickey
     servant-github-webhook,
     text,
     wai,
-    warp
+    warp,
+    transformers

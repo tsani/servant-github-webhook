@@ -49,9 +49,9 @@ retrieve.
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Servant.GitHub.Webhook
 ( -- * Servant combinators
@@ -251,7 +251,7 @@ instance Aeson.FromJSON e => Aeson.FromJSON (EventWithHookRepo e) where
 instance EventHasRepo e => HasRepository (EventWithHookRepo e) where
     getFullName = Just . whRepoFullName . repoForEvent . eventOf
 
-instance forall sublayout context list result (key :: k).
+instance
   ( HasServer sublayout context
   , HasContextEntry context (GitHubKey' (Demote key) result)
   , Reflect key
@@ -315,7 +315,7 @@ instance forall sublayout context list result (key :: k).
             -> DelayedIO (Demote key, result)
       verifySigWithKey (msg, hdr, v) key = do
         let sig =
-              B16.encode $ convert $ hmacGetDigest $ hmac @_ @_ @SHA1 key msg
+              B16.encode $ convert $ hmacGetDigest (hmac key msg :: HMAC SHA1)
 
         case parseHeaderMaybe =<< hdr of
           Nothing -> delayedFailFatal err401
@@ -325,7 +325,7 @@ instance forall sublayout context list result (key :: k).
             then pure (keyIndex, v)
             else delayedFailFatal err401
 
-instance forall sublayout context events.
+instance
   (Reflect events, HasServer sublayout context)
   => HasServer (GitHubEvent events :> sublayout) context where
 

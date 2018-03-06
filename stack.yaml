@@ -1,1 +1,11 @@
-resolver: nightly-2018-03-05
+resolver: lts-6.27
+extra-deps:
+- git: https://github.com/rahulmutt/github-webhooks
+  commit: cf16054e2ae9eba8c3bca3e2bbe5e1fb5bffd817
+- github-0.18
+- servant-0.11
+- servant-server-0.11.0.1
+- cabal-doctest-1.0.4
+- http-api-data-0.3.7.1
+- natural-transformation-0.4
+- attoparsec-iso8601-1.0.0.0
