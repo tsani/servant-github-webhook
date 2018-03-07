@@ -1,7 +1,7 @@
 resolver: lts-6.27
 extra-deps:
-- git: https://github.com/rahulmutt/github-webhooks
-  commit: cf16054e2ae9eba8c3bca3e2bbe5e1fb5bffd817
+- git: https://github.com/onrock-eng/github-webhooks
+  commit: 658bb697b3762c780488559ef68460f064a1ad95
 - github-0.18
 - servant-0.11
 - servant-server-0.11.0.1
