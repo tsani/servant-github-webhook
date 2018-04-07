@@ -200,10 +200,16 @@ gitHubKey f = GitHubKey (\_ _ -> Just <$> f)
 -- limits the impact of compromized keys and allows the server to acquire the
 -- key from external sources, such as a live configuration or per-user rows
 -- in a database.
-dynamicKey :: (T.Text -> IO (Maybe BS.ByteString)) -> (result -> Maybe T.Text) -> GitHubKey result
+dynamicKey
+  :: (T.Text -> IO (Maybe BS.ByteString))
+  -> (result -> Maybe T.Text)
+  -> GitHubKey result
 dynamicKey f lk = GitHubKey (\_ r -> maybe (pure Nothing) f (lk r))
 
-repositoryKey :: HasRepository result => (T.Text -> IO (Maybe BS.ByteString)) -> GitHubKey result
+repositoryKey
+  :: HasRepository result
+  => (T.Text -> IO (Maybe BS.ByteString))
+  -> GitHubKey result
 repositoryKey f = dynamicKey f getFullName
 
 -- | The HasRepository class helps extract the full (unique) "name/repo" of a
