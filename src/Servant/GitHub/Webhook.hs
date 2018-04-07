@@ -260,6 +260,10 @@ instance
     m
     = (Demote key, result) -> ServerT sublayout m
 
+  hoistServerWithContext _ _ f s = \p -> hoistServerWithContext p1 p2 f (s p) where
+    p1 = Proxy :: Proxy sublayout
+    p2 = Proxy :: Proxy context
+
   route
     :: forall env.
        Proxy (
@@ -325,6 +329,10 @@ instance
 
   type ServerT (GitHubEvent events :> sublayout) m
     = RepoWebhookEvent -> ServerT sublayout m
+
+  hoistServerWithContext _ _ f s = \p -> hoistServerWithContext p1 p2 f (s p) where
+    p1 = Proxy :: Proxy sublayout
+    p2 = Proxy :: Proxy context
 
   route
     :: forall env. Proxy (GitHubEvent events :> sublayout)
