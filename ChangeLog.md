@@ -1,5 +1,11 @@
 # Revision history for servant-github-webhook
 
+## 0.4.1.0  -- 2018-04-07
+
+* Include integration with github-webhooks package.
+* Code is adjusted for backwards-compatibility with GHC 7.10.
+* `HasServer` instances are updated for servant-0.13 or later, due to `hoistServerWithContext`.
+
 ## 0.4.0.0  -- 2018-02-03
 
 * Use constant-time equality to check signatures.
