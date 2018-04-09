@@ -18,7 +18,6 @@ before_install:
 
 install:
   - stack --version
-  - stack --no-terminal build --resolver lts-10.8
   - stack --no-terminal build
 
 # Here starts the actual work to be performed for the package under test;
