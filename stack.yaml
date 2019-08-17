@@ -1,1 +1,5 @@
-resolver: nightly-2018-04-05
+resolver: lts-14.1
+
+extra-deps:
+  - github-0.22
+  - binary-instances-1
