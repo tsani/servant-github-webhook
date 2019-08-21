@@ -1,5 +1,9 @@
 # Revision history for servant-github-webhook
 
+## 0.4.2.0  -- 2019-08-21
+
+* Add some more Reflect instances
+
 ## 0.4.1.0  -- 2018-04-07
 
 * Include integration with github-webhooks package.
