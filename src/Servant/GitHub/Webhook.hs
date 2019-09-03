@@ -426,6 +426,9 @@ instance Reflect 'WebhookGollumEvent where
 instance Reflect 'WebhookInstallationEvent where
   reflect _ = WebhookInstallationEvent
 
+instance Reflect 'WebhookRepositoryEvent where
+  reflect _ = WebhookRepositoryEvent
+
 instance Reflect 'WebhookInstallationRepositoriesEvent where
   reflect _ = WebhookInstallationRepositoriesEvent
 
