@@ -3,3 +3,4 @@ resolver: lts-14.1
 extra-deps:
   - github-0.22
   - binary-instances-1
+  - github-webhooks-0.12.0
