@@ -402,6 +402,12 @@ instance (Reflect x, Reflect xs) => Reflect (x ': xs) where
 instance Reflect 'WebhookWildcardEvent where
   reflect _ = WebhookWildcardEvent
 
+instance Reflect 'WebhookCheckSuiteEvent where
+  reflect _ = WebhookCheckSuiteEvent
+
+instance Reflect 'WebhookCheckRunEvent where
+  reflect _ = WebhookCheckRunEvent
+
 instance Reflect 'WebhookCommitCommentEvent where
   reflect _ = WebhookCommitCommentEvent
 
