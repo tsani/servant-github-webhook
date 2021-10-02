@@ -444,6 +444,9 @@ instance Reflect 'WebhookIssueCommentEvent where
 instance Reflect 'WebhookIssuesEvent where
   reflect _ = WebhookIssuesEvent
 
+instance Reflect 'WebhookMarketplacePurchaseEvent where
+  reflect _ = WebhookMarketplacePurchaseEvent
+
 instance Reflect 'WebhookMemberEvent where
   reflect _ = WebhookMemberEvent
 
