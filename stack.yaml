@@ -1,6 +1,4 @@
-resolver: lts-14.1
+resolver: lts-19.2
 
 extra-deps:
-  - github-0.22
-  - binary-instances-1
-  - github-webhooks-0.12.0
+  - github-webhooks-0.16.0
