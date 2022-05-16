@@ -93,12 +93,12 @@ import Crypto.MAC.HMAC ( hmac, HMAC(..) )
 import Data.Aeson ( decode', encode, Value(String, Object) )
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonType
+import qualified Data.Aeson.KeyMap as AesonKeyMap
 import Data.ByteArray ( convert, constEq )
 import qualified Data.Text as T
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy ( fromStrict, toStrict )
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.HashMap.Strict as HashMap
 import Data.List ( intercalate )
 import Data.Maybe ( catMaybes, fromMaybe )
 import Data.Monoid ( (<>) )
@@ -225,8 +225,8 @@ instance HasRepository Value where
 
 instance HasRepository AesonType.Object where
     getFullName o =
-        do Object r <- HashMap.lookup "repository" o
-           String n <- HashMap.lookup "full_name" r
+        do Object r <- AesonKeyMap.lookup "repository" o
+           String n <- AesonKeyMap.lookup "full_name" r
            pure n
 
 -- |For use with 'github-webhooks' package types.  Routes would look like:
