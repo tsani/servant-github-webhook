@@ -1,6 +1,7 @@
 servant-github-webhook
 ======================
 
+[![Build status](https://github.com/tsani/servant-github-webhook/actions/workflows/cabal.yml/badge.svg)](https://github.com/tsani/servant-github-webhook/actions/workflows/cabal.yml)
 [![Build Status][badge-travis]][travis]
 [![Hackage][badge-hackage]][hackage]
 [![servant-github-webhook][badge-stackage-lts]][stackage-lts]
